@@ -69,6 +69,7 @@ class OnboardWidget extends StatefulWidget {
 }
 
 class _OnboardWidgetState extends State<OnboardWidget> with SingleTickerProviderStateMixin {
+  bool _LastScreen = false;
   int index = 0;
   RectTween _hole;
   AnimationController _controller;
@@ -94,11 +95,15 @@ class _OnboardWidgetState extends State<OnboardWidget> with SingleTickerProvider
       index = 0;
     } else {
       await _controller.reverse();
-      index++;
-      if (index >= widget.steps.length) {
-        index--;
+      if (index + 1 >= widget.steps.length && _lastSceen == false) {
+        _lastSceen = true;
         Navigator.of(context).pop();
         return;
+      } else if (_lastSceen == false){
+        index++;
+        if(widget.steps[index].callback != null) {
+          widget.steps[index].callback();
+        }
       }
     }
     RenderBox box = widget.steps[index].key?.currentContext?.findRenderObject();
