@@ -8,32 +8,31 @@ class OnboardStep {
   final ShapeBorder shape;
   final EdgeInsets margin;
   final bool tappable;
-  final Stream proceed;
+  final Stream? proceed;
   OnboardStep({
-    @required this.key,
-    this.label: "",
-    this.shape: const RoundedRectangleBorder(
+    required this.key,
+    this.label = "",
+    this.shape = const RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(8.0)),
     ),
-    this.margin: const EdgeInsets.all(8.0),
-    this.tappable: true,
+    this.margin = const EdgeInsets.all(8.0),
+    this.tappable = true,
     this.proceed,
   });
 }
 
 void onboard(List<OnboardStep> steps, BuildContext context) {
-  Navigator.of(context).push(
-    OnboardRoute(
-      steps: steps,
-    )
-  );
+  Navigator.of(context).push(OnboardRoute(
+    steps: steps,
+  ));
 }
 
 class OnboardRoute extends TransitionRoute {
   final List<OnboardStep> steps;
-  OnboardRoute({@required this.steps});
+  OnboardRoute({required this.steps});
 
-  Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+  Widget buildTransitions(BuildContext context, Animation<double> animation,
+      Animation<double>? secondaryAnimation, Widget child) {
     return FadeTransition(
       opacity: animation,
       child: child,
@@ -48,7 +47,7 @@ class OnboardRoute extends TransitionRoute {
     yield OverlayEntry(
       builder: (context) => buildTransitions(
         context,
-        animation,
+        animation!,
         secondaryAnimation,
         OnboardWidget(steps: steps),
       ),
@@ -57,64 +56,65 @@ class OnboardRoute extends TransitionRoute {
 
   @override
   bool get opaque => false;
-
 }
 
 class OnboardWidget extends StatefulWidget {
-  final List<OnboardStep> steps;
+  final List<OnboardStep>? steps;
   OnboardWidget({this.steps});
-  
+
   @override
   _OnboardWidgetState createState() => _OnboardWidgetState();
 }
 
-class _OnboardWidgetState extends State<OnboardWidget> with SingleTickerProviderStateMixin {
+class _OnboardWidgetState extends State<OnboardWidget>
+    with SingleTickerProviderStateMixin {
   int index = 0;
-  RectTween _hole;
-  AnimationController _controller;
-  Animation _animation;
+  RectTween? _hole;
+  late AnimationController _controller;
+  late Animation _animation;
 
-  void initState() { 
+  void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: Duration(milliseconds: 150));
+    _controller =
+        AnimationController(vsync: this, duration: Duration(milliseconds: 150));
     _hole = RectTween(begin: Rect.zero, end: Rect.zero);
     _animation = AlwaysStoppedAnimation<double>(0.0);
-    _controller.addListener(() => setState((){}));
+    _controller.addListener(() => setState(() {}));
     _proceed(init: true);
   }
 
   @override
-  void dispose() { 
+  void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  void _proceed({bool init: false}) async {
+  void _proceed({bool init = false}) async {
     if (init) {
       index = 0;
     } else {
       await _controller.reverse();
       index++;
-      if (index >= widget.steps.length) {
+      if (index >= widget.steps!.length) {
         index--;
         Navigator.of(context).pop();
         return;
       }
     }
-    RenderBox box = widget.steps[index].key?.currentContext?.findRenderObject();
-    Offset offset = box?.localToGlobal(Offset.zero);
-    Rect widgetRect = box != null
-      ? offset & box.size
-      : null;
-    _hole = widgetRect != null 
-      ? RectTween(
-          begin: Rect.zero.shift(widgetRect.center),
-          end: widget.steps[index].margin.inflateRect(widgetRect),
-      ) : null;
+    RenderBox? box = widget.steps![index].key.currentContext?.findRenderObject()
+        as RenderBox?;
+    Offset? offset = box?.localToGlobal(Offset.zero);
+    Rect? widgetRect = box != null ? offset! & box.size : null;
+    _hole = widgetRect != null
+        ? RectTween(
+            begin: Rect.zero.shift(widgetRect.center),
+            end: widget.steps![index].margin.inflateRect(widgetRect),
+          )
+        : null;
     _animation = CurvedAnimation(curve: Curves.ease, parent: _controller);
-    StreamSubscription subscription;
-    subscription = widget.steps[index].proceed?.listen((_) {
-      subscription.cancel();
+    StreamSubscription? subscription;
+    subscription = widget.steps![index].proceed?.listen((_) {
+      subscription!.cancel();
       _proceed();
     });
     _controller.forward();
@@ -123,18 +123,17 @@ class _OnboardWidgetState extends State<OnboardWidget> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      behavior: widget.steps[index].tappable
+      behavior: widget.steps![index].tappable
           ? HitTestBehavior.opaque
           : HitTestBehavior.deferToChild,
-      onTap: widget.steps[index].tappable
-          ? _proceed
-          : null,
+      onTap: widget.steps![index].tappable ? _proceed : null,
       child: CustomPaint(
         child: Container(),
         painter: HolePainter(
-            shape: widget.steps[index].shape, hole: _hole?.evaluate(_animation)),
+            shape: widget.steps![index].shape,
+            hole: _hole?.evaluate(_animation as Animation<double>)),
         foregroundPainter: LabelPainter(
-          label: widget.steps[index].label,
+          label: widget.steps![index].label,
           opacity: _animation.value,
           hole: _hole?.end,
           viewport: MediaQuery.of(context).size,
@@ -145,8 +144,8 @@ class _OnboardWidgetState extends State<OnboardWidget> with SingleTickerProvider
 }
 
 class HolePainter extends CustomPainter {
-  final ShapeBorder shape;
-  final Rect hole;
+  final ShapeBorder? shape;
+  final Rect? hole;
   HolePainter({this.shape, this.hole});
 
   @override
@@ -161,7 +160,7 @@ class HolePainter extends CustomPainter {
       ..lineTo(canvasSize.width, canvasSize.height)
       ..lineTo(0, canvasSize.height)
       ..close();
-    Path holePath = shape.getOuterPath(hole ?? Rect.zero);
+    Path holePath = shape!.getOuterPath(hole ?? Rect.zero);
     Path path = Path.combine(PathOperation.difference, canvasPath, holePath);
     canvas.drawPath(
       path,
@@ -176,10 +175,10 @@ class HolePainter extends CustomPainter {
 }
 
 class LabelPainter extends CustomPainter {
-  final String label;
-  final double opacity;
-  final Rect hole;
-  final Size viewport;
+  final String? label;
+  final double? opacity;
+  final Rect? hole;
+  final Size? viewport;
   LabelPainter({this.label, this.opacity, this.hole, this.viewport});
 
   @override
@@ -187,19 +186,21 @@ class LabelPainter extends CustomPainter {
     TextPainter p = TextPainter(
       text: TextSpan(
           text: label,
-          style: TextStyle(color: Color.fromRGBO(255, 255, 255, opacity))),
+          style: TextStyle(color: Color.fromRGBO(255, 255, 255, opacity!))),
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     );
     p.layout(maxWidth: size.width * 0.8);
     Offset o = Offset(
-        size.width / 2 - p.size.width / 2,
-        hole == null
-          ? Rect.fromPoints(Offset.zero, size.bottomRight(Offset.zero)).center.dy
-          : hole.center.dy <= viewport.height / 2
-            ? hole.bottom + p.size.height * 1.5
-            : hole.top - p.size.height * 1.5,
-      );
+      size.width / 2 - p.size.width / 2,
+      hole == null
+          ? Rect.fromPoints(Offset.zero, size.bottomRight(Offset.zero))
+              .center
+              .dy
+          : hole!.center.dy <= viewport!.height / 2
+              ? hole!.bottom + p.size.height * 1.5
+              : hole!.top - p.size.height * 1.5,
+    );
     p.paint(canvas, o);
   }
 
